@@ -1,0 +1,186 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import {
+  Sidebar,
+  Table,
+  Button,
+  Navbar,
+  Dropdown,
+  Avatar,
+  Pagination,
+} from "flowbite-react";
+import { IoFastFood, IoRestaurantOutline, IoBusiness } from "react-icons/io5";
+import { Link, useNavigate } from "react-router-dom";
+import { HiUsers } from "react-icons/hi";
+import logo from "../assets/images/logo.png";
+import { jwtDecode } from "jwt-decode";
+
+const RestaurantTypes = () => {
+  const [restaurantTypes, setRestaurantTypes] = useState([]);
+  const [user, setUser] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const decodedUser = jwtDecode(token);
+      console.log("Dekodirani JWT token:", decodedUser);
+      setUser(decodedUser);
+    }
+
+    fetchRestaurantTypes();
+  }, []);
+
+  const fetchRestaurantTypes = async () => {
+    try {
+      const response = await axios.get("http://127.0.0.1:8000/restaurant-types/");
+      setRestaurantTypes(response.data);
+    } catch (error) {
+      console.error("Error fetching restaurant types:", error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://127.0.0.1:8000/restaurant-types/${id}`);
+      fetchRestaurantTypes();
+    } catch (error) {
+      console.error("Error deleting restaurant type:", error);
+    }
+  };
+
+  const onPageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = restaurantTypes.slice(indexOfFirstItem, indexOfLastItem);
+
+  return (
+    <div>
+      {/* Navbar */}
+      <Navbar fluid className="bg-transparent shadow-lg">
+        <Navbar.Brand href="/admin-dashboard">
+          <img src={logo} className="mr-3 h-6 sm:h-9" alt="Logo" />
+          <span className="self-center whitespace-nowrap text-xl font-semibold text-white">
+            Admin Dashboard - Restaurant Types
+          </span>
+        </Navbar.Brand>
+        <div className="flex md:order-2">
+          <Dropdown
+            arrowIcon={false}
+            inline
+            label={
+              <div className="relative mr-4">
+                <Avatar
+                  alt="User settings"
+                  img={`http://localhost:8000${user.profile_image}`}
+                  rounded
+                />
+              </div>
+            }
+          >
+            <Dropdown.Item onClick={() => navigate("/profile")}>
+              Go to Profile
+            </Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Item
+              onClick={() => {
+                localStorage.removeItem("token");
+                navigate("/");
+              }}
+            >
+              Logout
+            </Dropdown.Item>
+          </Dropdown>
+        </div>
+      </Navbar>
+
+      <div className="flex">
+        {/* Sidebar */}
+        <Sidebar aria-label="Default sidebar example" className="h-screen">
+          <Sidebar.Items>
+            <Sidebar.ItemGroup>
+              <Sidebar.Item href="/admin-dashboard" icon={IoBusiness}>
+                Restaurants
+              </Sidebar.Item>
+              <Sidebar.Item href="/food-types" icon={IoFastFood}>
+                Food Types
+              </Sidebar.Item>
+              <Sidebar.Item href="/restaurant-types" icon={IoRestaurantOutline}>
+                Restaurant Types
+              </Sidebar.Item>
+              <Sidebar.Item href="/restaurant-admins" icon={HiUsers}>
+                Restaurant Admins
+              </Sidebar.Item>
+            </Sidebar.ItemGroup>
+          </Sidebar.Items>
+        </Sidebar>
+
+        {/* Main content */}
+        <div className="p-8 flex-grow admin-dashboard-content">
+          <div className="admin-dashboard-card mt-16">
+            <div className="flex justify-end items-center mb-4">
+              <Link to="/add-restaurant-type">
+                <Button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                  Add New Restaurant Type
+                </Button>
+              </Link>
+            </div>
+            <div className="overflow-x-auto mt-8">
+              <Table hoverable>
+                <Table.Head>
+                  <Table.HeadCell>Name</Table.HeadCell>
+                  <Table.HeadCell>
+                    <span className="sr-only">Actions</span>
+                  </Table.HeadCell>
+                </Table.Head>
+                <Table.Body className="divide-y">
+                  {currentItems.map((restaurantType) => (
+                    <Table.Row
+                      key={restaurantType.id}
+                      className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                    >
+                      <Table.Cell className="whitespace-nowrap font-medium text-gray-900 dark:text-white">
+                        {restaurantType.name}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <div className="flex justify-end space-x-2">
+                          <Link
+                            to={`/edit-restaurant-type/${restaurantType.id}`}
+                          >
+                            <Button className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                              Edit
+                            </Button>
+                          </Link>
+                          <Button
+                            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+                            onClick={() => handleDelete(restaurantType.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table>
+              <div className="flex justify-center mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(restaurantTypes.length / itemsPerPage)}
+                  onPageChange={onPageChange}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RestaurantTypes;
